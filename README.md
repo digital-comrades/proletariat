@@ -1,7 +1,9 @@
 # proletariat
 
+![Go](https://github.com/digital-comrades/proletariat/workflows/Go/badge.svg)
+
 Simple message passing between systems. This primitive is not fault-tolerant, 
-this can be used as a base message passing to build more reliable primitives.
+and can be used as a base message passing to build more reliable primitives.
 
 ## Available
 
