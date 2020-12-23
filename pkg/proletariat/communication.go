@@ -1,6 +1,10 @@
 package proletariat
 
-import "time"
+import (
+	"context"
+	"io"
+	"time"
+)
 
 // Peer address
 type Address string
@@ -14,6 +18,13 @@ type CommunicationConfiguration struct {
 
 	// Timeout used when handling messages.
 	Timeout time.Duration
+
+	// The transport that should be used for connection.
+	Transport Transport
+
+	// The parent context to handle the life-cycle of
+	// the primitive.
+	Ctx context.Context
 }
 
 // Base communication interface that should be implemented.
@@ -21,6 +32,12 @@ type CommunicationConfiguration struct {
 // using the defined method is possible to send messages and
 // to listen incoming messages.
 type Communication interface {
+	io.Closer
+
+	// Start the Communication primitive, this method only return when
+	// the context is closed and will run the whole life cycle.
+	Start()
+
 	// Send the given data to the connect at the given address.
 	Send(Address, []byte) error
 
