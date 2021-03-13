@@ -48,7 +48,7 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 			t.Errorf("should not receive error. %#v", msg.Err)
 		}
 		if string(content) != string(msg.Data) {
-			t.Fatalf("failed. should be %s found %s", string(content), string(msg.Data))
+			t.Errorf("failed. should be %s found %s", string(content), string(msg.Data))
 		}
 	}()
 
@@ -64,24 +64,24 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 	if !WaitThisOrTimeout(func() {
 		err = commOne.Close()
 		if err != nil {
-			t.Fatalf("failed closing one. %v", err)
+			t.Errorf("failed closing one. %v", err)
 		}
 	}, testTimeout) {
 		PrintStackTrace(t)
-		t.Fatalf("took to long closing one")
+		t.Errorf("took to long closing one")
 	}
 
 	if !WaitThisOrTimeout(func() {
 		err = commTwo.Close()
 		if err != nil {
-			t.Fatalf("failed closing two. %v", err)
+			t.Errorf("failed closing two. %v", err)
 		}
 	}, testTimeout) {
 		PrintStackTrace(t)
-		t.Fatalf("took to long closing two")
+		t.Errorf("took to long closing two")
 	}
 
 	if !WaitThisOrTimeout(groupSync.Wait, time.Second) {
-		t.Fatalf("took to long closing goroutine")
+		t.Errorf("took to long closing goroutine")
 	}
 }
