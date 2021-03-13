@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"github.com/jabolina/proletariat/pkg/proletariat"
 	"net"
 	"time"
@@ -14,8 +15,9 @@ type TCP struct {
 }
 
 // Create a new TCP stream with the given address to bind.
-func NewTCPTransport(address proletariat.Address) (proletariat.Transport, error) {
-	listening, err := net.Listen("tcp", string(address))
+func NewTCPTransport(parent context.Context, address proletariat.Address) (Transport, error) {
+	var lc net.ListenConfig
+	listening, err := lc.Listen(parent, "tcp", string(address))
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +55,6 @@ func (t *TCP) Addr() net.Addr {
 }
 
 // Implement Transport interface.
-func (t *TCP) Bind(address proletariat.Address, timeout time.Duration) (net.Conn, error) {
+func (t *TCP) Dial(address proletariat.Address, timeout time.Duration) (net.Conn, error) {
 	return net.DialTimeout("tcp", string(address), timeout)
 }

@@ -2,8 +2,14 @@ package proletariat
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
+)
+
+var (
+	ErrNotTCP      = errors.New("address is not TCP")
+	ErrInvalidAddr = errors.New("address can not be used")
 )
 
 // Peer address
@@ -18,9 +24,6 @@ type CommunicationConfiguration struct {
 
 	// Timeout used when handling messages.
 	Timeout time.Duration
-
-	// The transport that should be used for connection.
-	Transport Transport
 
 	// The parent context to handle the life-cycle of
 	// the primitive.
@@ -42,5 +45,12 @@ type Communication interface {
 	Send(Address, []byte) error
 
 	// Listen for incoming messages.
-	Receive() <-chan []byte
+	Receive() <-chan Packet
+}
+
+type Packet struct {
+	Data []byte
+	Err  error
+	From Address
+	To   Address
 }

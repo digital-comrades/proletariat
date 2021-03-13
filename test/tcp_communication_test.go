@@ -13,29 +13,27 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 	tcpOneAddr := proletariat.Address("127.0.0.1:11111")
 	tcpTwoAddr := proletariat.Address("127.0.0.1:22222")
 	ctxOne, cancelOne := context.WithCancel(context.TODO())
-	tcpOne, err := internal.NewTCPTransport(tcpOneAddr)
+	ctxTwo, cancelTwo := context.WithCancel(context.TODO())
+	testTimeout := 500 * time.Millisecond
+
+	commOne, err := internal.NewCommunication(proletariat.CommunicationConfiguration{
+		Address: tcpOneAddr,
+		Timeout: 0,
+		Ctx:     ctxOne,
+	})
 	if err != nil {
 		t.Fatalf("failed tcp one: %v", err)
 	}
 
-	ctxTwo, cancelTwo := context.WithCancel(context.TODO())
-	tcpTwo, err := internal.NewTCPTransport(tcpTwoAddr)
+	commTwo, err := internal.NewCommunication(proletariat.CommunicationConfiguration{
+		Address: tcpTwoAddr,
+		Timeout: 0,
+		Ctx:     ctxTwo,
+	})
 	if err != nil {
 		t.Fatalf("failed tcp two: %v", err)
 	}
 
-	commOne := internal.NewCommunication(proletariat.CommunicationConfiguration{
-		Address:   tcpOneAddr,
-		Timeout:   time.Second,
-		Transport: tcpOne,
-		Ctx:       ctxOne,
-	})
-	commTwo := internal.NewCommunication(proletariat.CommunicationConfiguration{
-		Address:   tcpTwoAddr,
-		Timeout:   time.Second,
-		Transport: tcpTwo,
-		Ctx:       ctxTwo,
-	})
 	commOne.Start()
 	commTwo.Start()
 
@@ -46,8 +44,11 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 	go func() {
 		defer groupSync.Done()
 		msg := <-commOne.Receive()
-		if string(content) != string(msg) {
-			t.Fatalf("failed. should be %s found %s", string(content), string(msg))
+		if msg.Err != nil {
+			t.Errorf("should not receive error. %#v", msg.Err)
+		}
+		if string(content) != string(msg.Data) {
+			t.Fatalf("failed. should be %s found %s", string(content), string(msg.Data))
 		}
 	}()
 
@@ -56,7 +57,7 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 		t.Fatalf("failed sending. %v", err)
 	}
 
-	time.Sleep(time.Second)
+	time.Sleep(testTimeout)
 	cancelOne()
 	cancelTwo()
 
@@ -65,7 +66,8 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed closing one. %v", err)
 		}
-	}, time.Second) {
+	}, testTimeout) {
+		PrintStackTrace(t)
 		t.Fatalf("took to long closing one")
 	}
 
@@ -74,7 +76,8 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed closing two. %v", err)
 		}
-	}, time.Second) {
+	}, testTimeout) {
+		PrintStackTrace(t)
 		t.Fatalf("took to long closing two")
 	}
 

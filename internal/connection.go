@@ -1,4 +1,4 @@
-package proletariat
+package internal
 
 import "io"
 
