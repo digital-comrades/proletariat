@@ -2,7 +2,7 @@ package internal
 
 import (
 	"context"
-	"github.com/jabolina/proletariat/pkg/proletariat"
+	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"net"
 	"sync"
 	"time"

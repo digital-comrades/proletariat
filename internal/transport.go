@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"github.com/jabolina/proletariat/pkg/proletariat"
+	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"net"
 	"time"
 )

@@ -2,8 +2,8 @@ package test
 
 import (
 	"context"
-	"github.com/jabolina/proletariat/internal"
-	"github.com/jabolina/proletariat/pkg/proletariat"
+	"github.com/digital-comrades/proletariat/internal"
+	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"testing"
 )
 
