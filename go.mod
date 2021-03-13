@@ -1,3 +1,3 @@
-module github.com/jabolina/proletariat
+module github.com/digital-comrades/proletariat
 
 go 1.15
