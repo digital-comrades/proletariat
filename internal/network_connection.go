@@ -4,20 +4,31 @@ import (
 	"bufio"
 	"context"
 	"github.com/jabolina/proletariat/pkg/proletariat"
-	"log"
 	"net"
+	"strings"
 	"time"
 )
 
+const (
+	closedConnection = "use of closed network connection"
+)
+
+// Gather all needed configuration for managing the connection.
 type ConnectionConfiguration struct {
+	// Timeout to apply for reading/writing to the connection.
+	// Will only be applied if the value is greater than zero.
 	Timeout time.Duration
 
-	Read chan<- []byte
+	// Channel to publish the bytes received by the connection.
+	Read chan<- proletariat.Datagram
 
+	// Parent context to bound the connection methods.
 	Ctx context.Context
 
+	// The actual connection.
 	Connection net.Conn
 
+	// Peer address of the connection.
 	Target proletariat.Address
 }
 
@@ -41,7 +52,7 @@ type NetworkConnection struct {
 	configuration ConnectionConfiguration
 }
 
-func NewNetworkConnection(configuration ConnectionConfiguration) proletariat.Connection {
+func NewNetworkConnection(configuration ConnectionConfiguration) Connection {
 	return &NetworkConnection{
 		configuration: configuration,
 		target:        configuration.Target,
@@ -95,6 +106,7 @@ func (n *NetworkConnection) Write(bytes []byte) error {
 }
 
 // Implements the Connection interface.
+// Digest bytes received from the underlining connection.
 func (n *NetworkConnection) Listen() {
 	defer n.connection.Close()
 
@@ -105,12 +117,19 @@ func (n *NetworkConnection) Listen() {
 		default:
 			data, err := n.digest()
 			if err != nil {
-				log.Printf("failed digesting %v", err)
-				return
+				if strings.Contains(err.Error(), closedConnection) {
+					return
+				}
 			}
 
 			if data != nil {
-				n.configuration.Read <- data
+				datagram := proletariat.Datagram{
+					Data: data,
+					Err:  err,
+					From: proletariat.Address(n.connection.RemoteAddr().String()),
+					To:   proletariat.Address(n.connection.LocalAddr().String()),
+				}
+				n.configuration.Read <- datagram
 			}
 		}
 	}

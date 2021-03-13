@@ -1,6 +1,10 @@
 package test
 
-import "time"
+import (
+	"runtime"
+	"testing"
+	"time"
+)
 
 func WaitThisOrTimeout(cb func(), duration time.Duration) bool {
 	done := make(chan bool)
@@ -14,4 +18,10 @@ func WaitThisOrTimeout(cb func(), duration time.Duration) bool {
 	case <-time.After(duration):
 		return false
 	}
+}
+
+func PrintStackTrace(t *testing.T) {
+	buf := make([]byte, 1<<16)
+	runtime.Stack(buf, true)
+	t.Errorf("%s", buf)
 }
