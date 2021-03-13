@@ -29,7 +29,7 @@ type DefaultCommunication struct {
 	transport Transport
 
 	// Channel that will receive data from another connections.
-	listener chan proletariat.Packet
+	listener chan proletariat.Datagram
 
 	// All established connections.
 	connections map[proletariat.Address]Connection
@@ -54,7 +54,7 @@ func NewCommunication(configuration proletariat.CommunicationConfiguration) (pro
 		handler:       NewRoutineHandler(),
 		configuration: configuration,
 		transport:     tcp,
-		listener:      make(chan proletariat.Packet),
+		listener:      make(chan proletariat.Datagram),
 		connections:   make(map[proletariat.Address]Connection),
 		ctx:           ctx,
 		cancel:        cancel,
@@ -130,6 +130,7 @@ func (d *DefaultCommunication) saveNewConnection(conn net.Conn) Connection {
 	return connection
 }
 
+// Accept a incoming connection if the communication is not done.
 func (d *DefaultCommunication) acceptIncomingConnection(conn net.Conn) {
 	select {
 	case <-d.ctx.Done():
@@ -180,6 +181,7 @@ func (d *DefaultCommunication) Close() error {
 
 // Implements the Communication interface.
 func (d *DefaultCommunication) Start() {
+	// Are we leaking?
 	go d.poll()
 }
 
@@ -193,7 +195,7 @@ func (d *DefaultCommunication) Send(address proletariat.Address, data []byte) er
 }
 
 // Implements the Communication interface.
-func (d *DefaultCommunication) Receive() <-chan proletariat.Packet {
+func (d *DefaultCommunication) Receive() <-chan proletariat.Datagram {
 	return d.listener
 }
 

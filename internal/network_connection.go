@@ -20,7 +20,7 @@ type ConnectionConfiguration struct {
 	Timeout time.Duration
 
 	// Channel to publish the bytes received by the connection.
-	Read chan<- proletariat.Packet
+	Read chan<- proletariat.Datagram
 
 	// Parent context to bound the connection methods.
 	Ctx context.Context
@@ -123,13 +123,13 @@ func (n *NetworkConnection) Listen() {
 			}
 
 			if data != nil {
-				packet := proletariat.Packet{
+				datagram := proletariat.Datagram{
 					Data: data,
 					Err:  err,
 					From: proletariat.Address(n.connection.RemoteAddr().String()),
 					To:   proletariat.Address(n.connection.LocalAddr().String()),
 				}
-				n.configuration.Read <- packet
+				n.configuration.Read <- datagram
 			}
 		}
 	}

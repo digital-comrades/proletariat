@@ -45,12 +45,21 @@ type Communication interface {
 	Send(Address, []byte) error
 
 	// Listen for incoming messages.
-	Receive() <-chan Packet
+	Receive() <-chan Datagram
 }
 
-type Packet struct {
+// Represent a datagram for the transport layer.
+// Wraps the received data and errors from the connection.
+type Datagram struct {
+	// Received data from the underlining connection.
 	Data []byte
-	Err  error
+
+	// Errors received from the connection.
+	Err error
+
+	// Address that sent the message.
 	From Address
-	To   Address
+
+	// Message destination.
+	To Address
 }
