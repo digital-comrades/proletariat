@@ -1,7 +1,6 @@
-package internal
+package proletariat
 
 import (
-	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"net"
 	"time"
 )
@@ -11,5 +10,5 @@ type Transport interface {
 	net.Listener
 
 	// Dial to the given address to send requests.
-	Dial(address proletariat.Address, timeout time.Duration) (net.Conn, error)
+	Dial(address Address, timeout time.Duration) (net.Conn, error)
 }

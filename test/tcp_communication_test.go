@@ -2,21 +2,22 @@ package test
 
 import (
 	"context"
-	"github.com/digital-comrades/proletariat/internal"
 	"github.com/digital-comrades/proletariat/pkg/proletariat"
+	"go.uber.org/goleak"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestTCPCommunication_CreateAndSend(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	tcpOneAddr := proletariat.Address("127.0.0.1:11111")
 	tcpTwoAddr := proletariat.Address("127.0.0.1:22222")
 	ctxOne, cancelOne := context.WithCancel(context.TODO())
 	ctxTwo, cancelTwo := context.WithCancel(context.TODO())
 	testTimeout := 500 * time.Millisecond
 
-	commOne, err := internal.NewCommunication(proletariat.CommunicationConfiguration{
+	commOne, err := proletariat.NewCommunication(proletariat.Configuration{
 		Address: tcpOneAddr,
 		Timeout: 0,
 		Ctx:     ctxOne,
@@ -25,7 +26,7 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 		t.Fatalf("failed tcp one: %v", err)
 	}
 
-	commTwo, err := internal.NewCommunication(proletariat.CommunicationConfiguration{
+	commTwo, err := proletariat.NewCommunication(proletariat.Configuration{
 		Address: tcpTwoAddr,
 		Timeout: 0,
 		Ctx:     ctxTwo,
@@ -34,8 +35,8 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 		t.Fatalf("failed tcp two: %v", err)
 	}
 
-	commOne.Start()
-	commTwo.Start()
+	go commOne.Start()
+	go commTwo.Start()
 
 	content := []byte("Ola, Mundo!")
 

@@ -1,8 +1,7 @@
-package internal
+package proletariat
 
 import (
 	"context"
-	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"net"
 	"time"
 )
@@ -15,7 +14,7 @@ type TCP struct {
 }
 
 // Create a new TCP stream with the given address to bind.
-func NewTCPTransport(parent context.Context, address proletariat.Address) (Transport, error) {
+func NewTCPTransport(parent context.Context, address Address) (Transport, error) {
 	var lc net.ListenConfig
 	listening, err := lc.Listen(parent, "tcp", string(address))
 	if err != nil {
@@ -25,12 +24,12 @@ func NewTCPTransport(parent context.Context, address proletariat.Address) (Trans
 	addr, ok := tcp.Addr().(*net.TCPAddr)
 	if !ok {
 		defer listening.Close()
-		return nil, proletariat.ErrNotTCP
+		return nil, ErrNotTCP
 	}
 
 	if addr.IP == nil || addr.IP.IsUnspecified() {
 		defer listening.Close()
-		return nil, proletariat.ErrInvalidAddr
+		return nil, ErrInvalidAddr
 	}
 	tcp.addr = addr
 	return tcp, nil
@@ -55,6 +54,6 @@ func (t *TCP) Addr() net.Addr {
 }
 
 // Implement Transport interface.
-func (t *TCP) Dial(address proletariat.Address, timeout time.Duration) (net.Conn, error) {
+func (t *TCP) Dial(address Address, timeout time.Duration) (net.Conn, error) {
 	return net.DialTimeout("tcp", string(address), timeout)
 }
