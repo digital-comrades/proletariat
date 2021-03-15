@@ -26,6 +26,9 @@ lint: # @HELP lint files and format if possible
 dep-linter: # @HELP install the linter dependency
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(ENV)/bin $(GOLANG_CI_VERSION)
 
+bench: # @HELP execute benchmarks
+	go test -cpu 1,2,3,6 -benchmem -run=^$$ -bench=. ./test/...
+
 deps: # @HELP install dependencies
 	@echo "getting dependencies"
 	go get -t -d -v ./...

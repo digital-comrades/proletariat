@@ -1,16 +1,8 @@
-package internal
+package proletariat
 
 import (
 	"sync"
 	"time"
-)
-
-var (
-	// Ensure thread safety while creating a new GoRoutineHandler.
-	create = sync.Once{}
-
-	// Global instance for the handler.
-	handler *GoRoutineHandler
 )
 
 // GoRoutineHandler is responsible for handling goroutines.
@@ -29,14 +21,11 @@ type GoRoutineHandler struct {
 // This is a singleton to ensure that throughout the application exists
 // only one single point where go routines are spawned, thus avoiding a leak.
 func NewRoutineHandler() *GoRoutineHandler {
-	create.Do(func() {
-		handler = &GoRoutineHandler{
-			mutex:   &sync.Mutex{},
-			working: true,
-			group:   &sync.WaitGroup{},
-		}
-	})
-	return handler
+	return &GoRoutineHandler{
+		mutex:   &sync.Mutex{},
+		working: true,
+		group:   &sync.WaitGroup{},
+	}
 }
 
 // This method will increase the size of the group count and spawn

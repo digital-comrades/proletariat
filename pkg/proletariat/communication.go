@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"time"
 )
 
@@ -18,12 +19,15 @@ type Address string
 // Basic configuration for the Communication instance.
 // This will provide the parameters for binding the connection,
 // timeout when handling messages.
-type CommunicationConfiguration struct {
+type Configuration struct {
 	// Address to bind the connection.
 	Address Address
 
 	// Timeout used when handling messages.
 	Timeout time.Duration
+
+	// Connections can be pooled, this is the max size.
+	PoolSize int
 
 	// The parent context to handle the life-cycle of
 	// the primitive.
@@ -46,6 +50,9 @@ type Communication interface {
 
 	// Listen for incoming messages.
 	Receive() <-chan Datagram
+
+	// Returns the current communication address.
+	Addr() net.Addr
 }
 
 // Represent a datagram for the transport layer.

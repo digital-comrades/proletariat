@@ -1,9 +1,9 @@
-package internal
+package proletariat
 
 import (
 	"context"
-	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,25 +23,28 @@ type DefaultCommunication struct {
 	handler *GoRoutineHandler
 
 	// Configuration for the communication primitive.
-	configuration proletariat.CommunicationConfiguration
+	configuration Configuration
 
 	// Transport used to send and receive messages.
 	transport Transport
 
 	// Channel that will receive data from another connections.
-	listener chan proletariat.Datagram
+	listener chan Datagram
 
 	// All established connections.
-	connections map[proletariat.Address]Connection
+	connections map[Address][]Connection
 
 	// Primitive context.
 	ctx context.Context
 
 	// Function to cancel the primitive execution.
 	cancel context.CancelFunc
+
+	// Channel to synchronize to primitive closing.
+	closed chan bool
 }
 
-func NewCommunication(configuration proletariat.CommunicationConfiguration) (proletariat.Communication, error) {
+func NewCommunication(configuration Configuration) (Communication, error) {
 	ctx, cancel := context.WithCancel(configuration.Ctx)
 	tcp, err := NewTCPTransport(ctx, configuration.Address)
 	if err != nil {
@@ -54,10 +57,11 @@ func NewCommunication(configuration proletariat.CommunicationConfiguration) (pro
 		handler:       NewRoutineHandler(),
 		configuration: configuration,
 		transport:     tcp,
-		listener:      make(chan proletariat.Datagram),
-		connections:   make(map[proletariat.Address]Connection),
+		listener:      make(chan Datagram),
+		connections:   make(map[Address][]Connection),
 		ctx:           ctx,
 		cancel:        cancel,
+		closed:        make(chan bool),
 	}
 	return comm, nil
 }
@@ -81,7 +85,7 @@ func (d *DefaultCommunication) handleIncomingConnection(conn net.Conn) {
 			Read:       d.listener,
 			Ctx:        ctx,
 			Connection: conn,
-			Target:     proletariat.Address(conn.RemoteAddr().String()),
+			Target:     Address(conn.RemoteAddr().String()),
 		}
 		connection := NewNetworkConnection(incoming)
 		d.handler.Spawn(connection.Listen)
@@ -90,7 +94,7 @@ func (d *DefaultCommunication) handleIncomingConnection(conn net.Conn) {
 }
 
 // For a given address, create a new connection instance if possible.
-func (d *DefaultCommunication) resolveConnection(address proletariat.Address) (Connection, error) {
+func (d *DefaultCommunication) resolveConnection(address Address) (Connection, error) {
 	if connection := d.getActiveConnection(address); connection != nil {
 		return connection, nil
 	}
@@ -98,26 +102,27 @@ func (d *DefaultCommunication) resolveConnection(address proletariat.Address) (C
 }
 
 // Retrieve a connection for the in-memory available connections.
-func (d *DefaultCommunication) getActiveConnection(address proletariat.Address) Connection {
+func (d *DefaultCommunication) getActiveConnection(address Address) Connection {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	return d.connections[address]
+	connections, ok := d.connections[address]
+	if !ok || len(connections) == 0 {
+		return nil
+	}
+
+	var connection Connection
+	size := len(connections)
+	connection, connections[size-1] = connections[size-1], nil
+	d.connections[address] = connections[:size-1]
+	return connection
 }
 
 // Establish a connection with another peer using the available transport if possible.
-func (d *DefaultCommunication) establishNewConnection(address proletariat.Address) (Connection, error) {
+func (d *DefaultCommunication) establishNewConnection(address Address) (Connection, error) {
 	conn, err := d.transport.Dial(address, d.configuration.Timeout)
 	if err != nil {
 		return nil, err
 	}
-	return d.saveNewConnection(conn), nil
-}
-
-// Given a connection, create a new proletariat.Connection and store it on the memory map.
-func (d *DefaultCommunication) saveNewConnection(conn net.Conn) Connection {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-	address := proletariat.Address(conn.RemoteAddr().String())
 	config := ConnectionConfiguration{
 		Timeout:    d.configuration.Timeout,
 		Read:       d.listener,
@@ -125,9 +130,30 @@ func (d *DefaultCommunication) saveNewConnection(conn net.Conn) Connection {
 		Target:     address,
 		Ctx:        d.ctx,
 	}
-	connection := NewNetworkConnection(config)
-	d.connections[address] = connection
-	return connection
+	return NewNetworkConnection(config), nil
+}
+
+func (d *DefaultCommunication) maybeSaveConnection(address Address, connection Connection) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	available := d.connections[address]
+	if d.configuration.PoolSize > 0 && len(available) > d.configuration.PoolSize {
+		return
+	}
+	d.connections[address] = append(available, connection)
+}
+
+// Given a connection, create a new proletariat.Connection and store it on the memory map.
+func (d *DefaultCommunication) saveNewConnection(conn net.Conn) {
+	address := Address(conn.RemoteAddr().String())
+	config := ConnectionConfiguration{
+		Timeout:    d.configuration.Timeout,
+		Read:       d.listener,
+		Connection: conn,
+		Target:     address,
+		Ctx:        d.ctx,
+	}
+	d.maybeSaveConnection(address, NewNetworkConnection(config))
 }
 
 // Accept a incoming connection if the communication is not done.
@@ -143,10 +169,33 @@ func (d *DefaultCommunication) acceptIncomingConnection(conn net.Conn) {
 	}
 }
 
+// Implements the Communication interface.
+func (d *DefaultCommunication) Close() error {
+	defer d.handler.Close()
+	d.cancel()
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	for key, connections := range d.connections {
+		for _, connection := range connections {
+			if err := connection.Close(); err != nil {
+				return err
+			}
+		}
+		delete(d.connections, key)
+	}
+	if err := d.transport.Close(); err != nil {
+		return err
+	}
+	<-d.closed
+	return nil
+}
+
+// Implements the Communication interface.
 // Accept new connections from external peers and start a new goroutine
 // to start the life-cycle asynchronously.
 // The Accept method to receive a new connection is a blocking call.
-func (d *DefaultCommunication) poll() {
+func (d *DefaultCommunication) Start() {
 	var pollDelay = minPollDelay
 	for {
 		pollDelay = min(pollDelay*2, maxPollDelay)
@@ -154,6 +203,9 @@ func (d *DefaultCommunication) poll() {
 		if err == nil {
 			pollDelay = minPollDelay
 			d.acceptIncomingConnection(conn)
+		} else if strings.Contains(err.Error(), closedConnection) {
+			d.cancel()
+			d.closed <- true
 		}
 
 		select {
@@ -166,37 +218,27 @@ func (d *DefaultCommunication) poll() {
 }
 
 // Implements the Communication interface.
-func (d *DefaultCommunication) Close() error {
-	defer d.handler.Close()
-	d.cancel()
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-	for _, connection := range d.connections {
-		if err := connection.Close(); err != nil {
-			return err
-		}
-	}
-	return d.transport.Close()
-}
-
-// Implements the Communication interface.
-func (d *DefaultCommunication) Start() {
-	// Are we leaking?
-	go d.poll()
-}
-
-// Implements the Communication interface.
-func (d *DefaultCommunication) Send(address proletariat.Address, data []byte) error {
+func (d *DefaultCommunication) Send(address Address, data []byte) error {
 	connection, err := d.resolveConnection(address)
 	if err != nil {
 		return err
 	}
-	return connection.Write(data)
+
+	if err = connection.Write(data); err != nil {
+		connection.Close()
+		return err
+	}
+	d.maybeSaveConnection(address, connection)
+	return nil
 }
 
 // Implements the Communication interface.
-func (d *DefaultCommunication) Receive() <-chan proletariat.Datagram {
+func (d *DefaultCommunication) Receive() <-chan Datagram {
 	return d.listener
+}
+
+func (d *DefaultCommunication) Addr() net.Addr {
+	return d.transport.Addr()
 }
 
 func min(a time.Duration, b time.Duration) time.Duration {
