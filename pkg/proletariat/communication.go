@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ErrNotTCP      = errors.New("address is not TCP")
-	ErrInvalidAddr = errors.New("address can not be used")
+	ErrNotTCP        = errors.New("address is not TCP")
+	ErrInvalidAddr   = errors.New("address can not be used")
+	ErrAlreadyClosed = errors.New("communication was already closed")
 )
 
 // Peer address
