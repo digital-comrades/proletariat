@@ -19,6 +19,9 @@ type DefaultCommunication struct {
 	// Synchronize operations on available connections.
 	mutex *sync.Mutex
 
+	// Flag to transition between states.
+	flag *Flag
+
 	// Handler to carefully invoke new goroutines.
 	handler *GoRoutineHandler
 
@@ -54,6 +57,7 @@ func NewCommunication(configuration Configuration) (Communication, error) {
 
 	comm := &DefaultCommunication{
 		mutex:         &sync.Mutex{},
+		flag:          &Flag{},
 		handler:       NewRoutineHandler(),
 		configuration: configuration,
 		transport:     tcp,
@@ -61,7 +65,7 @@ func NewCommunication(configuration Configuration) (Communication, error) {
 		connections:   make(map[Address][]Connection),
 		ctx:           ctx,
 		cancel:        cancel,
-		closed:        make(chan bool),
+		closed:        make(chan bool, 1),
 	}
 	return comm, nil
 }
@@ -90,6 +94,16 @@ func (d *DefaultCommunication) handleIncomingConnection(conn net.Conn) {
 		connection := NewNetworkConnection(incoming)
 		d.handler.Spawn(connection.Listen)
 		<-ctx.Done()
+	}
+}
+
+// Verify if the communication is closed.
+func (d *DefaultCommunication) isClosed() bool {
+	select {
+	case <-d.ctx.Done():
+		return true
+	default:
+		return d.flag.IsInactive()
 	}
 }
 
@@ -171,23 +185,25 @@ func (d *DefaultCommunication) acceptIncomingConnection(conn net.Conn) {
 
 // Implements the Communication interface.
 func (d *DefaultCommunication) Close() error {
-	defer d.handler.Close()
-	d.cancel()
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
+	if d.flag.Inactivate() {
+		defer d.handler.Close()
+		d.cancel()
+		d.mutex.Lock()
+		defer d.mutex.Unlock()
 
-	for key, connections := range d.connections {
-		for _, connection := range connections {
-			if err := connection.Close(); err != nil {
-				return err
+		for key, connections := range d.connections {
+			for _, connection := range connections {
+				if err := connection.Close(); err != nil {
+					return err
+				}
 			}
+			delete(d.connections, key)
 		}
-		delete(d.connections, key)
+		if err := d.transport.Close(); err != nil {
+			return err
+		}
+		<-d.closed
 	}
-	if err := d.transport.Close(); err != nil {
-		return err
-	}
-	<-d.closed
 	return nil
 }
 
@@ -196,6 +212,11 @@ func (d *DefaultCommunication) Close() error {
 // to start the life-cycle asynchronously.
 // The Accept method to receive a new connection is a blocking call.
 func (d *DefaultCommunication) Start() {
+	if d.isClosed() {
+		return
+	}
+
+	defer close(d.closed)
 	var pollDelay = minPollDelay
 	for {
 		pollDelay = min(pollDelay*2, maxPollDelay)
@@ -206,6 +227,7 @@ func (d *DefaultCommunication) Start() {
 		} else if strings.Contains(err.Error(), closedConnection) {
 			d.cancel()
 			d.closed <- true
+			println("wrote to closed")
 		}
 
 		select {
@@ -219,6 +241,10 @@ func (d *DefaultCommunication) Start() {
 
 // Implements the Communication interface.
 func (d *DefaultCommunication) Send(address Address, data []byte) error {
+	if d.isClosed() {
+		return ErrAlreadyClosed
+	}
+
 	connection, err := d.resolveConnection(address)
 	if err != nil {
 		return err
