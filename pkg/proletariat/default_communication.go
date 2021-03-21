@@ -83,17 +83,16 @@ func (d *DefaultCommunication) handleIncomingConnection(conn net.Conn) {
 		return
 	default:
 		ctx, cancel := context.WithCancel(d.ctx)
-		defer cancel()
 		incoming := ConnectionConfiguration{
 			Timeout:    d.configuration.Timeout,
 			Read:       d.listener,
 			Ctx:        ctx,
+			Cancel:     cancel,
 			Connection: conn,
 			Target:     Address(conn.RemoteAddr().String()),
 		}
 		connection := NewNetworkConnection(incoming)
 		d.handler.Spawn(connection.Listen)
-		<-ctx.Done()
 	}
 }
 
@@ -137,12 +136,14 @@ func (d *DefaultCommunication) establishNewConnection(address Address) (Connecti
 	if err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithCancel(d.ctx)
 	config := ConnectionConfiguration{
 		Timeout:    d.configuration.Timeout,
 		Read:       d.listener,
 		Connection: conn,
 		Target:     address,
-		Ctx:        d.ctx,
+		Ctx:        ctx,
+		Cancel:     cancel,
 	}
 	return NewNetworkConnection(config), nil
 }
@@ -160,12 +161,14 @@ func (d *DefaultCommunication) maybeSaveConnection(address Address, connection C
 // Given a connection, create a new proletariat.Connection and store it on the memory map.
 func (d *DefaultCommunication) saveNewConnection(conn net.Conn) {
 	address := Address(conn.RemoteAddr().String())
+	ctx, cancel := context.WithCancel(d.ctx)
 	config := ConnectionConfiguration{
 		Timeout:    d.configuration.Timeout,
 		Read:       d.listener,
 		Connection: conn,
 		Target:     address,
-		Ctx:        d.ctx,
+		Ctx:        ctx,
+		Cancel:     cancel,
 	}
 	d.maybeSaveConnection(address, NewNetworkConnection(config))
 }
@@ -227,7 +230,6 @@ func (d *DefaultCommunication) Start() {
 		} else if strings.Contains(err.Error(), closedConnection) {
 			d.cancel()
 			d.closed <- true
-			println("wrote to closed")
 		}
 
 		select {
