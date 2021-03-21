@@ -25,6 +25,9 @@ type ConnectionConfiguration struct {
 	// Parent context to bound the connection methods.
 	Ctx context.Context
 
+	// Cancel the current context.
+	Cancel context.CancelFunc
+
 	// The actual connection.
 	Connection net.Conn
 
@@ -95,6 +98,7 @@ func (n *NetworkConnection) digest() ([]byte, error) {
 
 // Implements the Connection interface.
 func (n *NetworkConnection) Close() error {
+	n.configuration.Cancel()
 	n.decoder.Release()
 	n.encoder.Release()
 	return n.connection.Close()
