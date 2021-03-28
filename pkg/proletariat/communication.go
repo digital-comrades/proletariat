@@ -15,6 +15,7 @@
 package proletariat
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -74,7 +75,7 @@ type Communication interface {
 // Wraps the received data and errors from the connection.
 type Datagram struct {
 	// Received data from the underlining connection.
-	Data []byte
+	Data *bytes.Buffer
 
 	// Errors received from the connection.
 	Err error

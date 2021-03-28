@@ -16,15 +16,15 @@ package proletariat
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"github.com/ugorji/go/codec"
 	"net"
-	"strings"
 	"time"
 )
 
 const (
-	closedConnection = "use of closed network connection"
+	ClosedConnection = "use of closed network connection"
 )
 
 // Gather all needed configuration for managing the connection.
@@ -73,10 +73,15 @@ type NetworkConnection struct {
 
 	// The configuration for the structure.
 	configuration ConnectionConfiguration
+
+	// Receiver is responsible for handling received messages.
+	receiver IReceiver
 }
 
-func NewNetworkConnection(configuration ConnectionConfiguration) Connection {
+func NewNetworkConnection(handler *GoRoutineHandler, configuration ConnectionConfiguration) Connection {
 	r, w := bufio.NewReader(configuration.Connection), bufio.NewWriter(configuration.Connection)
+	receiver := NewReceiver(configuration.Read, configuration.Timeout, configuration.Ctx)
+	handler.Spawn(receiver.Start)
 	return &NetworkConnection{
 		configuration: configuration,
 		target:        configuration.Target,
@@ -85,6 +90,7 @@ func NewNetworkConnection(configuration ConnectionConfiguration) Connection {
 		writer:        w,
 		encoder:       codec.NewEncoder(w, &codec.MsgpackHandle{}),
 		decoder:       codec.NewDecoder(r, &codec.MsgpackHandle{}),
+		receiver:      receiver,
 	}
 }
 
@@ -98,6 +104,9 @@ func (n *NetworkConnection) digest() ([]byte, error) {
 		}
 	}
 
+	// Decoding into a nil interface will delegate to the
+	// decoder to correctly identify and construct the object.
+	// In our case, a byte slice.
 	var data interface{}
 	if err := n.decoder.Decode(&data); err != nil {
 		return nil, err
@@ -113,7 +122,10 @@ func (n *NetworkConnection) digest() ([]byte, error) {
 // Implements the Connection interface.
 func (n *NetworkConnection) Close() error {
 	n.configuration.Cancel()
-	return n.connection.Close()
+	if err := n.connection.Close(); err != nil {
+		return err
+	}
+	return n.receiver.Close()
 }
 
 // Implements the Connection interface.
@@ -140,22 +152,14 @@ func (n *NetworkConnection) Listen() {
 			return
 		default:
 			data, err := n.digest()
-			if err != nil {
-				// The underlying connection was closed, for this specific
-				// kind of error we will not notify.
-				if strings.Contains(err.Error(), closedConnection) {
-					return
-				}
-			}
-
 			if data != nil {
 				datagram := Datagram{
-					Data: data,
+					Data: bytes.NewBuffer(data),
 					Err:  err,
 					From: Address(n.connection.RemoteAddr().String()),
 					To:   Address(n.connection.LocalAddr().String()),
 				}
-				n.configuration.Read <- datagram
+				n.receiver.AddResponse(datagram)
 			}
 		}
 	}

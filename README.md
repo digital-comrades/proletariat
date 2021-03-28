@@ -9,21 +9,21 @@ package. The only guarantees are the ones implemented by TCP itself and nothing 
 
 ### Benchmark
 
-A simple benchmark, creates a sever and client and publishes 1024 messages:
+A simple benchmark, creates a sever and client for listening messages and publishes 1024 messages:
 
 ```text
 goos: linux
 goarch: amd64
 pkg: github.com/digital-comrades/proletariat/test
 cpu: AMD Ryzen 5 3500X 6-Core Processor             
-Benchmark_CommunicationMessages             	       1	1003044424 ns/op	  487976 B/op	   13564 allocs/op
-Benchmark_CommunicationMessages-2           	       1	1005693788 ns/op	  399464 B/op	   13504 allocs/op
-Benchmark_CommunicationMessages-3           	       1	1005936827 ns/op	  403128 B/op	   13498 allocs/op
-Benchmark_CommunicationMessages-6           	       1	1006335248 ns/op	  393024 B/op	   13502 allocs/op
-Benchmark_CommunicationParallelMessages     	       1	1005231383 ns/op	  400608 B/op	   13521 allocs/op
-Benchmark_CommunicationParallelMessages-2   	       1	1005472590 ns/op	  401072 B/op	   13504 allocs/op
-Benchmark_CommunicationParallelMessages-3   	       1	1006118222 ns/op	  409912 B/op	   13520 allocs/op
-Benchmark_CommunicationParallelMessages-6   	       1	1005206180 ns/op	  404376 B/op	   13529 allocs/op
+Benchmark_CommunicationMessages             	     325	   3797034 ns/op	  371058 B/op	   13248 allocs/op
+Benchmark_CommunicationMessages-2           	     746	   2569464 ns/op	  284241 B/op	   10190 allocs/op
+Benchmark_CommunicationMessages-3           	    1527	   2282558 ns/op	  353102 B/op	   12626 allocs/op
+Benchmark_CommunicationMessages-6           	    1669	   1212951 ns/op	  333823 B/op	   11945 allocs/op
+Benchmark_CommunicationParallelMessages     	     403	   3714202 ns/op	  363654 B/op	   12990 allocs/op
+Benchmark_CommunicationParallelMessages-2   	     786	   1745899 ns/op	  178969 B/op	    6469 allocs/op
+Benchmark_CommunicationParallelMessages-3   	     952	   1864454 ns/op	  193721 B/op	    6991 allocs/op
+Benchmark_CommunicationParallelMessages-6   	    1334	   2575388 ns/op	  271032 B/op	    9719 allocs/op
 ```
 
 ### Comments

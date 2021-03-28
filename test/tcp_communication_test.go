@@ -62,8 +62,8 @@ func TestTCPCommunication_CreateAndSend(t *testing.T) {
 		if msg.Err != nil {
 			t.Errorf("should not receive error. %#v", msg.Err)
 		}
-		if string(content) != string(msg.Data) {
-			t.Errorf("failed. should be %s found %s", string(content), string(msg.Data))
+		if string(content) != msg.Data.String() {
+			t.Errorf("failed. should be %s found %s", string(content), msg.Data.String())
 		}
 	}()
 
