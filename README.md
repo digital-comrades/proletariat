@@ -29,9 +29,9 @@ Benchmark_CommunicationParallelMessages-6   	       1	1005206180 ns/op	  404376 
 ### Comments
 
 This is a simple library to wraps any boilerplate needed when using the `net` package, providing 
-the most basic features and nothing fancy. This is packed using the encoder/decoder maintained by
-the Hashicorp people, had some trouble when reading directly from the `bufio` so it was easier to
-add a decoder to handle this, but this could be a TODO for the future.
+the most basic features and nothing fancy. This is packed using the encoder/decoder, had some trouble 
+when reading directly from the `bufio` so it was easier to add a decoder to handle this, but this could 
+be a TODO for the future.
 
 Also added a connection pool when dealing with writes, using always a single connection could lead
 to writes always failing with `short write`. Using a pool of connections seems to fix this issue, since

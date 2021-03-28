@@ -1,9 +1,23 @@
+// Copyright (C) 2020-2021 digital-comrades and others.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//         http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package proletariat
 
 import (
 	"bufio"
 	"context"
-	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/ugorji/go/codec"
 	"net"
 	"strings"
 	"time"
@@ -99,8 +113,6 @@ func (n *NetworkConnection) digest() ([]byte, error) {
 // Implements the Connection interface.
 func (n *NetworkConnection) Close() error {
 	n.configuration.Cancel()
-	n.decoder.Release()
-	n.encoder.Release()
 	return n.connection.Close()
 }
 
@@ -129,6 +141,8 @@ func (n *NetworkConnection) Listen() {
 		default:
 			data, err := n.digest()
 			if err != nil {
+				// The underlying connection was closed, for this specific
+				// kind of error we will not notify.
 				if strings.Contains(err.Error(), closedConnection) {
 					return
 				}
