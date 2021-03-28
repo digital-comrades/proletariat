@@ -75,7 +75,7 @@ func NewCommunication(configuration Configuration) (Communication, error) {
 		handler:       NewRoutineHandler(),
 		configuration: configuration,
 		transport:     tcp,
-		listener:      make(chan Datagram),
+		listener:      make(chan Datagram, 1024),
 		connections:   make(map[Address][]Connection),
 		ctx:           ctx,
 		cancel:        cancel,
@@ -105,7 +105,7 @@ func (d *DefaultCommunication) handleIncomingConnection(conn net.Conn) {
 			Connection: conn,
 			Target:     Address(conn.RemoteAddr().String()),
 		}
-		connection := NewNetworkConnection(incoming)
+		connection := NewNetworkConnection(d.handler, incoming)
 		d.handler.Spawn(connection.Listen)
 	}
 }
@@ -159,7 +159,7 @@ func (d *DefaultCommunication) establishNewConnection(address Address) (Connecti
 		Ctx:        ctx,
 		Cancel:     cancel,
 	}
-	return NewNetworkConnection(config), nil
+	return NewNetworkConnection(d.handler, config), nil
 }
 
 func (d *DefaultCommunication) maybeSaveConnection(address Address, connection Connection) {
@@ -184,7 +184,7 @@ func (d *DefaultCommunication) saveNewConnection(conn net.Conn) {
 		Ctx:        ctx,
 		Cancel:     cancel,
 	}
-	d.maybeSaveConnection(address, NewNetworkConnection(config))
+	d.maybeSaveConnection(address, NewNetworkConnection(d.handler, config))
 }
 
 // Accept a incoming connection if the communication is not done.
@@ -220,6 +220,7 @@ func (d *DefaultCommunication) Close() error {
 			return err
 		}
 		<-d.closed
+		close(d.listener)
 	}
 	return nil
 }
@@ -241,7 +242,7 @@ func (d *DefaultCommunication) Start() {
 		if err == nil {
 			pollDelay = minPollDelay
 			d.acceptIncomingConnection(conn)
-		} else if strings.Contains(err.Error(), closedConnection) {
+		} else if strings.Contains(err.Error(), ClosedConnection) {
 			d.cancel()
 			d.closed <- true
 		}
@@ -279,6 +280,7 @@ func (d *DefaultCommunication) Receive() <-chan Datagram {
 	return d.listener
 }
 
+// Returns the current communication address.
 func (d *DefaultCommunication) Addr() net.Addr {
 	return d.transport.Addr()
 }

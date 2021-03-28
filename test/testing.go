@@ -15,7 +15,9 @@
 package test
 
 import (
+	"github.com/digital-comrades/proletariat/pkg/proletariat"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -38,4 +40,8 @@ func PrintStackTrace(t *testing.T) {
 	buf := make([]byte, 1<<16)
 	runtime.Stack(buf, true)
 	t.Errorf("%s", buf)
+}
+
+func IsClosedError(err error) bool {
+	return strings.Contains(err.Error(), proletariat.ClosedConnection)
 }
