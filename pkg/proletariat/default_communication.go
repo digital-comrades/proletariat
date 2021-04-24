@@ -27,7 +27,7 @@ const (
 	maxPollDelay = 500 * time.Millisecond
 )
 
-// Default struct that implements the Communication interface.
+// DefaultCommunication default struct that implements the Communication interface.
 // Using this implementation is possible to send and receive messages.
 type DefaultCommunication struct {
 	// Synchronize operations on available connections.
@@ -200,7 +200,7 @@ func (d *DefaultCommunication) acceptIncomingConnection(conn net.Conn) {
 	}
 }
 
-// Implements the Communication interface.
+// Close implements the Communication interface.
 func (d *DefaultCommunication) Close() error {
 	if d.flag.Inactivate() {
 		defer d.handler.Close()
@@ -225,7 +225,7 @@ func (d *DefaultCommunication) Close() error {
 	return nil
 }
 
-// Implements the Communication interface.
+// Start implements the Communication interface.
 // Accept new connections from external peers and start a new goroutine
 // to start the life-cycle asynchronously.
 // The Accept method to receive a new connection is a blocking call.
@@ -256,7 +256,7 @@ func (d *DefaultCommunication) Start() {
 	}
 }
 
-// Implements the Communication interface.
+// Send implements the Communication interface.
 func (d *DefaultCommunication) Send(address Address, data []byte) error {
 	if d.isClosed() {
 		return ErrAlreadyClosed
@@ -275,12 +275,12 @@ func (d *DefaultCommunication) Send(address Address, data []byte) error {
 	return nil
 }
 
-// Implements the Communication interface.
+// Receive implements the Communication interface.
 func (d *DefaultCommunication) Receive() <-chan Datagram {
 	return d.listener
 }
 
-// Returns the current communication address.
+// Addr returns the current communication address.
 func (d *DefaultCommunication) Addr() net.Addr {
 	return d.transport.Addr()
 }

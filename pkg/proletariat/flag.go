@@ -35,17 +35,17 @@ type Flag struct {
 	flag int32
 }
 
-// Returns `true` if the flag still active.
+// IsActive returns `true` if the flag still active.
 func (f *Flag) IsActive() bool {
 	return atomic.LoadInt32(&f.flag) == active
 }
 
-// Returns `true` if the flag is inactive.
+// IsInactive returns `true` if the flag is inactive.
 func (f *Flag) IsInactive() bool {
 	return atomic.LoadInt32(&f.flag) == inactive
 }
 
-// Will inactivate the flag.
+// Inactivate will inactivate the flag.
 // Returns `true` if was active and now is inactive and returns `false`
 // if it was already inactivated.
 func (f *Flag) Inactivate() bool {
