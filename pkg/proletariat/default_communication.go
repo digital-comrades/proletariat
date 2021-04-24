@@ -105,7 +105,7 @@ func (d *DefaultCommunication) handleIncomingConnection(conn net.Conn) {
 			Connection: conn,
 			Target:     Address(conn.RemoteAddr().String()),
 		}
-		connection := NewNetworkConnection(d.handler, incoming)
+		connection := NewNetworkConnection(incoming)
 		d.handler.Spawn(connection.Listen)
 	}
 }
@@ -159,7 +159,7 @@ func (d *DefaultCommunication) establishNewConnection(address Address) (Connecti
 		Ctx:        ctx,
 		Cancel:     cancel,
 	}
-	return NewNetworkConnection(d.handler, config), nil
+	return NewNetworkConnection(config), nil
 }
 
 func (d *DefaultCommunication) maybeSaveConnection(address Address, connection Connection) {
@@ -184,7 +184,7 @@ func (d *DefaultCommunication) saveNewConnection(conn net.Conn) {
 		Ctx:        ctx,
 		Cancel:     cancel,
 	}
-	d.maybeSaveConnection(address, NewNetworkConnection(d.handler, config))
+	d.maybeSaveConnection(address, NewNetworkConnection(config))
 }
 
 // Accept a incoming connection if the communication is not done.

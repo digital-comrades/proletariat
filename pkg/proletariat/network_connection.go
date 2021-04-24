@@ -74,15 +74,10 @@ type NetworkConnection struct {
 
 	// The configuration for the structure.
 	configuration ConnectionConfiguration
-
-	// Receiver is responsible for handling received messages.
-	receiver IReceiver
 }
 
-func NewNetworkConnection(handler *GoRoutineHandler, configuration ConnectionConfiguration) Connection {
+func NewNetworkConnection(configuration ConnectionConfiguration) Connection {
 	r, w := bufio.NewReader(configuration.Connection), bufio.NewWriter(configuration.Connection)
-	receiver := NewReceiver(configuration.Read, configuration.Timeout, configuration.Ctx)
-	handler.Spawn(receiver.Start)
 	return &NetworkConnection{
 		configuration: configuration,
 		target:        configuration.Target,
@@ -91,7 +86,26 @@ func NewNetworkConnection(handler *GoRoutineHandler, configuration ConnectionCon
 		writer:        w,
 		encoder:       codec.NewEncoder(w, &codec.MsgpackHandle{}),
 		decoder:       codec.NewDecoder(r, &codec.MsgpackHandle{}),
-		receiver:      receiver,
+	}
+}
+
+// Delivers a message back through the read channel.
+// If no timeout is configured, this will be locked here until the
+// channel is consumed or the connection is closed.
+func (n *NetworkConnection) deliverDatagram(datagram Datagram) {
+	if n.configuration.Timeout <= 0 {
+		select {
+		case n.configuration.Read <- datagram:
+		case <-n.configuration.Ctx.Done():
+		}
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(n.configuration.Ctx, n.configuration.Timeout)
+	defer cancel()
+	select {
+	case n.configuration.Read <- datagram:
+	case <-ctx.Done():
 	}
 }
 
@@ -123,10 +137,7 @@ func (n *NetworkConnection) digest() ([]byte, error) {
 // Close implements the Connection interface.
 func (n *NetworkConnection) Close() error {
 	n.configuration.Cancel()
-	if err := n.connection.Close(); err != nil {
-		return err
-	}
-	return n.receiver.Close()
+	return n.connection.Close()
 }
 
 // Implements the Connection interface.
@@ -160,7 +171,7 @@ func (n *NetworkConnection) Listen() {
 					From: Address(n.connection.RemoteAddr().String()),
 					To:   Address(n.connection.LocalAddr().String()),
 				}
-				n.receiver.AddResponse(datagram)
+				n.deliverDatagram(datagram)
 			}
 		}
 	}
