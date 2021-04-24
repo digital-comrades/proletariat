@@ -138,7 +138,7 @@ func (f *fifoReceiver) Start() {
 			if f.tryDeliver(d.(Datagram)) {
 				f.queue.Pop()
 			}
-		default:
+		case <-time.After(time.Millisecond):
 			f.peekAndTryDeliver()
 		}
 	}
