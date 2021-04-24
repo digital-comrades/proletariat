@@ -27,7 +27,7 @@ type TCP struct {
 	listener net.Listener
 }
 
-// Create a new TCP stream with the given address to bind.
+// NewTCPTransport create a new TCP stream with the given address to bind.
 func NewTCPTransport(parent context.Context, address Address) (Transport, error) {
 	var lc net.ListenConfig
 	listening, err := lc.Listen(parent, "tcp", string(address))
@@ -49,17 +49,17 @@ func NewTCPTransport(parent context.Context, address Address) (Transport, error)
 	return tcp, nil
 }
 
-// Implement Transport interface.
+// Accept implement Transport interface.
 func (t *TCP) Accept() (net.Conn, error) {
 	return t.listener.Accept()
 }
 
-// Implement Transport interface.
+// Close implement Transport interface.
 func (t *TCP) Close() error {
 	return t.listener.Close()
 }
 
-// Implement Transport interface.
+// Addr implement Transport interface.
 func (t *TCP) Addr() net.Addr {
 	if t.addr != nil {
 		return t.addr
@@ -67,7 +67,7 @@ func (t *TCP) Addr() net.Addr {
 	return t.listener.Addr()
 }
 
-// Implement Transport interface.
+// Dial implement Transport interface.
 func (t *TCP) Dial(address Address, timeout time.Duration) (net.Conn, error) {
 	return net.DialTimeout("tcp", string(address), timeout)
 }

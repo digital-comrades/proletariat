@@ -19,18 +19,18 @@ import (
 	"sync"
 )
 
-// Interface to create simple functions for a queue.
+// Queue interface to create simple functions for a queue.
 type Queue interface {
-	// Insert a new element to the queue.
+	// Append insert a new element to the queue.
 	Append(interface{})
 
-	// Verify the head of the queue, without removing.
+	// Peek verify the head of the queue, without removing.
 	Peek() interface{}
 
-	// Remove the fist element, nil if empty.
+	// Pop remove the fist element, nil if empty.
 	Pop() interface{}
 
-	// Channel to be notified when new elements are added.
+	// HasElements channel to be notified when new elements are added.
 	HasElements() <-chan interface{}
 }
 
@@ -52,7 +52,7 @@ type buffer struct {
 	hasElements chan interface{}
 }
 
-// Create a new queue.
+// NewQueue create a new queue.
 func NewQueue() Queue {
 	return &buffer{
 		data:        make(map[int64]interface{}),
@@ -86,7 +86,7 @@ func (b *buffer) notify() {
 	}
 }
 
-// Insert a new element to the end of the buffer.
+// Append insert a new element to the end of the buffer.
 func (b *buffer) Append(i interface{}) {
 	defer b.notify()
 	b.mutex.Lock()
@@ -97,8 +97,8 @@ func (b *buffer) Append(i interface{}) {
 	b.buf = append(b.buf, id)
 }
 
-// Verify the head of the queue. If the queue does not have
-// elements, nil is returned.
+// Peek verify the head of the queue. If the queue does
+// not have elements, nil is returned.
 func (b *buffer) Peek() interface{} {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
@@ -109,12 +109,12 @@ func (b *buffer) Peek() interface{} {
 	return b.data[b.buf[0]]
 }
 
-// Listen for the channel.
+// HasElements listen for the channel.
 func (b *buffer) HasElements() <-chan interface{} {
 	return b.hasElements
 }
 
-// Remove the head of the queue. If there is not element,
+// Pop remove the head of the queue. If there is not element,
 // nil is returned.
 func (b *buffer) Pop() interface{} {
 	b.mutex.Lock()

@@ -20,8 +20,8 @@ test: # @HELP execute tests
 
 lint: # @HELP lint files and format if possible
 	@echo "executing linter"
-	gofmt -s -w .
-	GO111MODULE=on golangci-lint run -c .golangci-lint.yml $(FMT) ./...
+	gofmt -s -w ./pkg
+	GO111MODULE=on golangci-lint run -c .golangci-lint.yml $(FMT) ./pkg/...
 
 dep-linter: # @HELP install the linter dependency
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(ENV)/bin $(GOLANG_CI_VERSION)

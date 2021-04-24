@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-// Basic transport that should be implemented.
+// Transport is the basic transport that should be implemented.
 type Transport interface {
 	net.Listener
 
