@@ -95,8 +95,8 @@ func NewNetworkConnection(configuration ConnectionConfiguration) Connection {
 func (n *NetworkConnection) deliverDatagram(datagram Datagram) {
 	if n.configuration.Timeout <= 0 {
 		select {
-		case n.configuration.Read <- datagram:
 		case <-n.configuration.Ctx.Done():
+		case n.configuration.Read <- datagram:
 		}
 		return
 	}
@@ -104,8 +104,8 @@ func (n *NetworkConnection) deliverDatagram(datagram Datagram) {
 	ctx, cancel := context.WithTimeout(n.configuration.Ctx, n.configuration.Timeout)
 	defer cancel()
 	select {
-	case n.configuration.Read <- datagram:
 	case <-ctx.Done():
+	case n.configuration.Read <- datagram:
 	}
 }
 
