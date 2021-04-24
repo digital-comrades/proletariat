@@ -16,7 +16,6 @@ package proletariat
 
 import (
 	"sync"
-	"time"
 )
 
 // GoRoutineHandler is responsible for handling goroutines.
@@ -31,8 +30,8 @@ type GoRoutineHandler struct {
 	group *sync.WaitGroup
 }
 
-// Create a singleton instance for the GoRoutineHandler struct.
-// This is a singleton to ensure that throughout the application exists
+// NewRoutineHandler create a instance for the GoRoutineHandler struct.
+// This is used to ensure that throughout the application exists
 // only one single point where go routines are spawned, thus avoiding a leak.
 func NewRoutineHandler() *GoRoutineHandler {
 	return &GoRoutineHandler{
@@ -42,8 +41,8 @@ func NewRoutineHandler() *GoRoutineHandler {
 	}
 }
 
-// This method will increase the size of the group count and spawn
-// the new go routine. After the routine is done, the group will be decreased.
+// Spawn will increase the size of the group count and spawn the new go routine.
+// After the routine is done, the group will be decreased.
 //
 // This method will panic if the handler is already closed.
 func (h *GoRoutineHandler) Spawn(f func()) {
@@ -60,21 +59,7 @@ func (h *GoRoutineHandler) Spawn(f func()) {
 	}()
 }
 
-func (h *GoRoutineHandler) WithTimeout(f func(), timeout time.Duration) bool {
-	done := make(chan bool)
-	h.Spawn(func() {
-		f()
-		done <- true
-	})
-	select {
-	case <-done:
-		return true
-	case <-time.After(timeout):
-		return false
-	}
-}
-
-// Blocks while waiting for go routines to stop. This will set the
+// Close blocks while waiting for go routines to stop. This will set the
 // working mode to off, so after this is called any spawned go routine will panic.
 func (h *GoRoutineHandler) Close() {
 	h.mutex.Lock()

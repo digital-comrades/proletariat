@@ -29,10 +29,10 @@ var (
 	ErrAlreadyClosed = errors.New("communication was already closed")
 )
 
-// Peer address
+// Address is the peer address
 type Address string
 
-// Basic configuration for the Communication instance.
+// Configuration for the Communication instance.
 // This will provide the parameters for binding the connection,
 // timeout when handling messages.
 type Configuration struct {
@@ -50,7 +50,7 @@ type Configuration struct {
 	Ctx context.Context
 }
 
-// Base communication interface that should be implemented.
+// Communication is the base communication interface that should be implemented.
 // This will be the interface the client will interact with,
 // using the defined method is possible to send messages and
 // to listen incoming messages.
@@ -64,14 +64,14 @@ type Communication interface {
 	// Send the given data to the connect at the given address.
 	Send(Address, []byte) error
 
-	// Listen for incoming messages.
+	// Receive listen for incoming messages.
 	Receive() <-chan Datagram
 
-	// Returns the current communication address.
+	// Addr returns the current communication address.
 	Addr() net.Addr
 }
 
-// Represent a datagram for the transport layer.
+// Datagram represent a datagram for the transport layer.
 // Wraps the received data and errors from the connection.
 type Datagram struct {
 	// Received data from the underlining connection.

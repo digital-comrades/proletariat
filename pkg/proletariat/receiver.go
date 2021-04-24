@@ -23,7 +23,7 @@ import (
 
 const defaultConsumptionTimeout = time.Millisecond
 
-// Receiver should handle all messages received by the connections.
+// IReceiver should handle all messages received by the connections.
 //
 // When publishing back a message to be consumed by the client,
 // not necessarily it will be consumed directly, so the receiver will
@@ -31,10 +31,10 @@ const defaultConsumptionTimeout = time.Millisecond
 type IReceiver interface {
 	io.Closer
 
-	// Will start polling to deliver messages.
+	// Start will start polling to deliver messages.
 	Start()
 
-	// Insert a new message to be delivered.
+	// AddResponse insert a new message to be delivered.
 	AddResponse(Datagram)
 }
 
@@ -120,13 +120,13 @@ func (f *fifoReceiver) peekAndTryDeliver() {
 	}
 }
 
-// Stop the current fifo receiver.
+// Close the current fifo receiver.
 func (f *fifoReceiver) Close() error {
 	f.cancel()
 	return nil
 }
 
-// Will executed while the application is running.
+// Start will execute while the application is running.
 // This method is responsible for delivering datagrams that were
 // not sent directly and are present on the buffer.
 func (f *fifoReceiver) Start() {
@@ -138,13 +138,13 @@ func (f *fifoReceiver) Start() {
 			if f.tryDeliver(d.(Datagram)) {
 				f.queue.Pop()
 			}
-		default:
+		case <-time.After(time.Millisecond):
 			f.peekAndTryDeliver()
 		}
 	}
 }
 
-// Handle a new received response.
+// AddResponse handle a new received response.
 // First it will try to directly deliver the datagram, if is not possible
 // the datagram will be stored on a buffer to be delivered later.
 //

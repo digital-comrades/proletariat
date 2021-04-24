@@ -27,7 +27,8 @@ const (
 	ClosedConnection = "use of closed network connection"
 )
 
-// Gather all needed configuration for managing the connection.
+// ConnectionConfiguration gather all needed configuration for managing
+// the connection.
 type ConnectionConfiguration struct {
 	// Timeout to apply for reading/writing to the connection.
 	// Will only be applied if the value is greater than zero.
@@ -49,7 +50,7 @@ type ConnectionConfiguration struct {
 	Target Address
 }
 
-// Default Connection implementation.
+// NetworkConnection is the default Connection implementation.
 // This will connect the peer to a target over the network.
 // Commands will be sent/received using the available Conn.
 type NetworkConnection struct {
@@ -119,7 +120,7 @@ func (n *NetworkConnection) digest() ([]byte, error) {
 	return data.([]byte), nil
 }
 
-// Implements the Connection interface.
+// Close implements the Connection interface.
 func (n *NetworkConnection) Close() error {
 	n.configuration.Cancel()
 	if err := n.connection.Close(); err != nil {
@@ -143,7 +144,7 @@ func (n *NetworkConnection) Write(bytes []byte) error {
 	return n.writer.Flush()
 }
 
-// Implements the Connection interface.
+// Listen implements the Connection interface.
 // Digest bytes received from the underlining connection.
 func (n *NetworkConnection) Listen() {
 	for {
