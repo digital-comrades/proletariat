@@ -46,7 +46,7 @@ type DefaultCommunication struct {
 	transport Transport
 
 	// Channel that will receive data from another connections.
-	listener chan Datagram
+	listener *SharedChannel
 
 	// All established connections.
 	connections map[Address][]Connection
@@ -75,7 +75,7 @@ func NewCommunication(configuration Configuration) (Communication, error) {
 		handler:       NewRoutineHandler(),
 		configuration: configuration,
 		transport:     tcp,
-		listener:      make(chan Datagram, 1024),
+		listener:      NewSharedChannel(),
 		connections:   make(map[Address][]Connection),
 		ctx:           ctx,
 		cancel:        cancel,
@@ -220,7 +220,7 @@ func (d *DefaultCommunication) Close() error {
 			return err
 		}
 		<-d.closed
-		close(d.listener)
+		return d.listener.Close()
 	}
 	return nil
 }
@@ -277,7 +277,7 @@ func (d *DefaultCommunication) Send(address Address, data []byte) error {
 
 // Receive implements the Communication interface.
 func (d *DefaultCommunication) Receive() <-chan Datagram {
-	return d.listener
+	return d.listener.Consume()
 }
 
 // Addr returns the current communication address.
