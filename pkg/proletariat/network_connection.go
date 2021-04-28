@@ -35,7 +35,7 @@ type ConnectionConfiguration struct {
 	Timeout time.Duration
 
 	// Channel to publish the bytes received by the connection.
-	Read chan<- Datagram
+	Read *SharedChannel
 
 	// Parent context to bound the connection methods.
 	Ctx context.Context
@@ -94,19 +94,13 @@ func NewNetworkConnection(configuration ConnectionConfiguration) Connection {
 // channel is consumed or the connection is closed.
 func (n *NetworkConnection) deliverDatagram(datagram Datagram) {
 	if n.configuration.Timeout <= 0 {
-		select {
-		case <-n.configuration.Ctx.Done():
-		case n.configuration.Read <- datagram:
-		}
+		n.configuration.Read.Publish(n.configuration.Ctx, datagram)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(n.configuration.Ctx, n.configuration.Timeout)
 	defer cancel()
-	select {
-	case <-ctx.Done():
-	case n.configuration.Read <- datagram:
-	}
+	n.configuration.Read.Publish(ctx, datagram)
 }
 
 // Read data from the reader. The default buffer will have size 1 Kb.
